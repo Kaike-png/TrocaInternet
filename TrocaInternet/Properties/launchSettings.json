@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TrocaInternet": {
+      "commandName": "Project"
+    },
+    "Container (Dockerfile)": {
+      "commandName": "Docker"
+    }
+  }
+}
