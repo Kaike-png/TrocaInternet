@@ -1,18 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
+﻿
+namespace TrocaInternet.TrocaInternet;
 
-namespace TrocaInternet.TrocaInternet
+internal static class StoreSettings
 {
-    internal class StoreSettings
+    public static string StoreNumber { get; private set; } = LoadStoreNumber();
+
+    private static string LoadStoreNumber()
     {
-        public static string StoreNumber = LoadStoreNumber();
-
-
-        public static string LoadStoreNumber()
+        try
         {
             if (File.Exists(Program.StoreConfigPath))
             {
@@ -20,21 +15,48 @@ namespace TrocaInternet.TrocaInternet
             }
             return "Não configurado";
         }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Erro ao carregar número da loja: {ex.Message}");
+            return "Não configurado";
+        }
+    }
 
-        public static void SaveStoreNumber(string storeNumber)
+    public static void SaveStoreNumber(string storeNumber)
+    {
+        try
         {
             File.WriteAllText(Program.StoreConfigPath, storeNumber);
+            StoreNumber = storeNumber;
         }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Erro ao salvar número da loja: {ex.Message}");
+        }
+    }
 
-        public static void ConfigureStoreNumber()
+    public static void ConfigureStoreNumber()
+    {
+        try
         {
             Console.Write("\n   Digite o número da loja: ");
-            StoreNumber = Console.ReadLine();
-            SaveStoreNumber(StoreNumber);
-            Console.WriteLine($"   Número da loja configurado como: {StoreNumber}");
+            string input = Console.ReadLine();
+            if (!string.IsNullOrEmpty(input))
+            {
+                SaveStoreNumber(input);
+                Console.WriteLine($"   Número da loja configurado como: {input}");
+            }
+            else
+            {
+                Console.WriteLine("   Número da loja inválido.");
+            }
             Console.WriteLine("   Pressione qualquer tecla para continuar...");
             Console.ReadKey();
             Console.Clear();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError($"Erro ao configurar número da loja: {ex.Message}");
         }
     }
 }

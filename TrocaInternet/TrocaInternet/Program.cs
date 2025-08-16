@@ -1,95 +1,118 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
-using Microsoft.Win32;
+using TrocaInternet.TrocaInternet.Network;
+using TrocaInternet.TrocaInternet.Schedule;
 
 namespace TrocaInternet.TrocaInternet;
 
-internal class Program
+internal static class Program
 {
-    public static readonly string StoreConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "store_config.txt"); //Caminho para ler e salvar a configuração da loja
-    private static NotifyIcon _notifyIcon;
-    private const int CtrlCloseEvent = 2; // Valor correspondente ao evento de fechamento do console
+    public static readonly string StoreConfigPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "store_config.txt");
+    public static NotifyIcon _notifyIcon;
+    private const int CtrlCloseEvent = 2;
 
-    // Delegate para o manipulador de eventos do console
     private delegate bool ConsoleEventDelegate(int eventType);
-
-    // Variável global para manter o delegate em escopo
     private static ConsoleEventDelegate _handler;
 
-    // Importação do método para configurar o manipulador de eventos do console
     [DllImport("kernel32.dll", SetLastError = true)]
     private static extern bool SetConsoleCtrlHandler(ConsoleEventDelegate callback, bool add);
 
-
     [DllImport("kernel32.dll")]
-    static extern nint GetConsoleWindow();
+    private static extern IntPtr GetConsoleWindow();
 
     [DllImport("user32.dll")]
-    static extern bool ShowWindow(nint hWnd, int nCmdShow);
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
     [DllImport("kernel32.dll")]
-    static extern bool AllocConsole();
+    private static extern bool AllocConsole();
 
     [DllImport("kernel32.dll")]
-    static extern bool FreeConsole();
+    private static extern bool FreeConsole();
 
-    const int SwHide = 0;
+    private const int SwHide = 0;
+
+    [STAThread]
     static async Task Main(string[] args)
     {
+        // Verifica se é uma chamada de atualização
+        if (args.Length >= 2)
+        {
+            UpdateManager.PerformUpdate(args[0], args[1]);
+            return;
+        }
+        // Carrega configurações
+        Config.Load();
+
         // Cria uma tarefa agendada para iniciar com o Logon do Usuário 
-        CreateScheduledTask();
+        ScheduledTask.CreateScheduledTask();
 
         // Configura o manipulador de eventos do console
-        _handler = new ConsoleEventDelegate(ConsoleEventCallback);
+        _handler = ConsoleEventCallback;
         SetConsoleCtrlHandler(_handler, true);
 
-        //Inicia monitoramento em uma thread separada
+        // Inicia monitoramento em uma thread separada
         _ = Task.Run(async () =>
         {
             while (true)
             {
-                NetworkHelper.ChangeGateway(); // Executa periodicamente
-                await Task.Delay(5000); // Espera 5 segundos entre as execuções
+                await NetworkHelper.ChangeGatewayAsync();
+                await Task.Delay(Config.CheckInterval);
             }
         });
+        // Inicia sistema de notificações
+        _ = Task.Run(async () =>
+        {
+            await NotificationManager.MonitorAndNotifyAsync();
+        });
+
+        // Inicia agendador de tarefas
+        Scheduler.StartScheduler();
 
         // Esconde a janela do console
-        nint handle = GetConsoleWindow();
+        IntPtr handle = GetConsoleWindow();
         ShowWindow(handle, SwHide);
 
         // Inicializa o NotifyIcon na bandeja do sistema
         _notifyIcon = new NotifyIcon
         {
-            Icon = new System.Drawing.Icon("Assets/Chama.ico"), // Ícone
+            Icon = new Icon("Assets/Chama.ico"),
             Visible = true,
-            Text = "Troca Internet", // Tooltip ao passar o mouse no ícone
+            Text = "Troca Internet",
         };
 
-        // Cria o ContextMenuStrip (menu de contexto moderno)
+        // Cria o ContextMenuStrip
         var contextMenu = new ContextMenuStrip();
-        contextMenu.Items.Add("Abrir Console", null, (s, e) =>
+        contextMenu.Items.Add("Abrir Console", null, (s, e) => ShowConsoleWindow());
+        contextMenu.Items.Add("Testar Conectividade", null, async (s, e) =>
         {
-            // Mostra o console
             ShowConsoleWindow();
+            await NetworkHelper.TestConnectivityAsync();
         });
+        contextMenu.Items.Add("Restaurar DHCP", null, (s, e) =>
+        {
+            ShowConsoleWindow();
+            NetworkHelper.RestoreDhcp();
+        });
+        contextMenu.Items.Add("-");
         contextMenu.Items.Add("Sair", null, (s, e) =>
         {
-            // Fecha o programa
             _notifyIcon.Dispose();
             Application.Exit();
         });
 
-        _notifyIcon.ContextMenuStrip = contextMenu; // Configura o menu de contexto
+        _notifyIcon.ContextMenuStrip = contextMenu;
 
         // Thread para monitoramento contínuo do startUp 
-        Thread monitoringThread = new Thread(MonitorStartUp);
-        monitoringThread.IsBackground = true;
+        Thread monitoringThread = new Thread(MonitorStartUp)
+        {
+            IsBackground = true
+        };
         monitoringThread.Start();
 
         // Mantém o ícone na bandeja ativo
         Application.Run();
     }
-    //Evita o erro do readLine no starUp
+
     public static string SafeReadLine()
     {
         if (!IsConsoleVisible())
@@ -100,14 +123,13 @@ internal class Program
         {
             return Console.ReadLine();
         }
-        catch (IOException ex)
+        catch (IOException)
         {
-
             return string.Empty;
         }
     }
 
-    private static void StartUp()
+    private static async Task StartUp()
     {
         while (IsConsoleVisible())
         {
@@ -122,21 +144,30 @@ internal class Program
             Console.WriteLine("\n   1. Verificar conexão atual");
             Console.WriteLine("   2. Alterar final do gateway");
             Console.WriteLine("   3. Configurar número da loja");
-            Console.WriteLine("   4. Sair");
+            Console.WriteLine("   4. Testar conectividade");
+            Console.WriteLine("   5. Restaurar configuração DHCP");
+            Console.WriteLine("   6. Visualizar logs");
+            Console.WriteLine("   7. Teste de velocidade (servidores padrão)");
+            Console.WriteLine("   8. Teste de velocidade (servidor personalizado)");
+            Console.WriteLine("   9. Traceroute");
+            Console.WriteLine("   10. Gerenciar perfis de rede");
+            Console.WriteLine("   11. Agendar tarefas");
+            Console.WriteLine("   12. Testar notificação");
+            Console.WriteLine("   13. Verificar atualizações");
+            Console.WriteLine("   14. Sair");
             Console.Write("\n   Escolha uma opção: ");
 
             string option = SafeReadLine();
             if (string.IsNullOrEmpty(option))
             {
-                Thread.Sleep(2000);
+                await Task.Delay(2000);
                 Console.WriteLine("   Pressione qualquer tecla para continuar...");
                 break;
             }
-
             switch (option)
             {
                 case "1":
-                    ShowNetworkInformation();
+                    await NetworkHelper.ShowNetworkInformation();
                     break;
                 case "2":
                     NetworkHelper.ChangeGatewayOctet();
@@ -145,29 +176,55 @@ internal class Program
                     StoreSettings.ConfigureStoreNumber();
                     break;
                 case "4":
-                    ConsoleEventCallback(2);
+                    await NetworkHelper.TestConnectivityAsync();
                     break;
-                case "":
-                    Console.WriteLine("   Opção inválida. Tente novamente.");
-                    Thread.Sleep(2000);
+                case "5":
+                    NetworkHelper.RestoreDhcp();
+                    break;
+                case "6":
+                    Logger.ShowLogs();
+                    break;
+                case "7":
+                    await NetworkHelper.TestConnectionSpeedAsync();
+                    break;
+                case "8":
+                    await NetworkHelper.TestConnectionSpeedWithCustomServerAsync();
+                    break;
+                case "9":
+                    Console.Write("   Digite o destino (padrão: google.com): ");
+                    string target = Console.ReadLine();
+                    if (string.IsNullOrWhiteSpace(target)) target = "google.com";
+                    await NetworkHelper.PerformTracerouteAsync(target);
+                    break;
+                case "10":
+                    await NetworkProfileManager.ManageNetworkProfiles();
+                    break;
+                case "11":
+                    await Scheduler.ManageScheduledTasks();
+                    break;
+                case "12":
+                    NotificationManager.TestNotification();
+                    break;
+                case "13":
+                    await UpdateManager.CheckForUpdatesAsync();
+                    break;
+                case "14":
+                    ConsoleEventCallback(2);
                     break;
                 default:
                     Console.WriteLine("   Opção inválida. Tente novamente.");
-                    Thread.Sleep(2000);
+                    await Task.Delay(2000);
                     break;
             }
         }
-    }
+    }       
+
     private static void ShowConsoleWindow()
     {
-        // Libera o console existente (se houver)
         FreeConsole();
-
-        // Reanexa o console ao processo atual
         AllocConsole();
 
-        // Redireciona a entrada, saída e erro padrão para o novo console
-        Console.OutputEncoding = System.Text.Encoding.UTF8; //Força a codificação para UTF-8
+        Console.OutputEncoding = System.Text.Encoding.UTF8;
         StreamWriter standardOutput = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
         StreamReader standardInput = new StreamReader(Console.OpenStandardInput());
         StreamWriter standardError = new StreamWriter(Console.OpenStandardError()) { AutoFlush = true };
@@ -176,23 +233,22 @@ internal class Program
         Console.SetIn(standardInput);
         Console.SetError(standardError);
 
-        // Configura o título do console
         Console.Title = "Troca Internet";
         Console.Clear();
     }
 
     public static bool IsConsoleVisible()
     {
-        nint handle = GetConsoleWindow();
-        return handle != nint.Zero; // Retorna true se o console existir
+        IntPtr handle = GetConsoleWindow();
+        return handle != IntPtr.Zero;
     }
 
-    private static void MonitorStartUp()
+    private static async void MonitorStartUp()
     {
         while (true)
         {
-            StartUp();
-            Thread.Sleep(2000);
+            await StartUp();
+            await Task.Delay(2000);
         }
     }
 
@@ -202,50 +258,11 @@ internal class Program
         {
             Console.WriteLine("   O console foi fechado, mas o aplicativo continuará na bandeja.");
             Pause();
-            nint handle = GetConsoleWindow();
-            ShowWindow(handle, SwHide); // Apenas oculta o console
+            IntPtr handle = GetConsoleWindow();
+            ShowWindow(handle, SwHide);
         }
-        return false; // Impede que o processo principal seja encerrado
-    }
-
-    private static void ShowNetworkInformation()
-    {
-        Console.Clear();
-        NetworkHelper.CurrentIpAddress = NetworkHelper.GetCurrentIpAddress();
-
-        Console.WriteLine($"\n   Interface ativa: {NetworkHelper.ActiveNetworkInterface}");
-        Console.WriteLine($"   Número da loja: {StoreSettings.StoreNumber}");
-        Console.WriteLine($"   IP atual: {NetworkHelper.CurrentIpAddress ?? "Nenhum IP encontrado"}");
-
-        string currentGateway = NetworkHelper.GetCurrentGateway();
-        Console.WriteLine($"   Gateway atual: {currentGateway ?? "Nenhum gateway encontrado"}");
-
-        if (currentGateway != null && NetworkHelper.PingAzure())
-        {
-            Console.WriteLine("   Conexão com o gateway estável.");
-        }
-        else
-        {
-            Console.WriteLine("   Conexão com o gateway falhou.");
-        }
-
-        Pause();
-    }
-
-    private static void CreateScheduledTask()
-    {
-        string taskName = "TrocaInternet";
-        string exePath = Process.GetCurrentProcess().MainModule.FileName;
-
-        Process.Start(new ProcessStartInfo
-        {
-            FileName = "schtasks",
-            Arguments = $"/create /tn \"{taskName}\" /tr \"{exePath}\" /sc onlogon /rl highest /f",
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            CreateNoWindow = true
-        });
-    }
+        return false;
+    }      
 
     public static void Pause()
     {
@@ -255,6 +272,6 @@ internal class Program
             Console.ReadKey();
             Console.Clear();
         }
-        
     }
+   
 }
