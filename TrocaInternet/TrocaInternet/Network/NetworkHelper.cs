@@ -154,13 +154,7 @@ internal static class NetworkHelper
             process?.WaitForExit();
 
             Logger.LogInfo($"Gateway alterado para: {gateway}");
-
-            if (Program.IsConsoleVisible())
-            {
-                Console.WriteLine($"\n   Gateway alterado para: {gateway}");
-                Console.WriteLine("   Pressione qualquer tecla para continuar...");
-                Program.SafeReadLine();
-            }
+                      
         }
         catch (Exception ex)
         {
@@ -226,26 +220,14 @@ internal static class NetworkHelper
 
             if (string.IsNullOrEmpty(CurrentIpAddress))
             {
-                if (Program.IsConsoleVisible())
-                {
-                    Console.WriteLine("   IP nulo ou inválido\n");
-                    Console.WriteLine("   Pressione qualquer tecla para continuar...");
-                    Console.ReadKey();
-                    Console.Clear();
-                }
+                Logger.LogError("IP nulo ou inválido.");
                 return;
             }
 
             string currentGateway = GetCurrentGateway();
             if (currentGateway == null)
             {
-                if (Program.IsConsoleVisible())
-                {
-                    Console.WriteLine("   Gateway nulo ou inválido\n");
-                    Console.WriteLine("   Pressione qualquer tecla para continuar...");
-                    Console.ReadKey();
-                    Console.Clear();
-                }
+                Logger.LogError("Gateway nulo ou inválido.");                
                 return;
             }
 

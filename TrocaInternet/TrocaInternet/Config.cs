@@ -17,7 +17,7 @@ public static class Config
         "8.8.8.8"
     };
     public static int PingTimeout { get; set; } = 2000;
-    public static int CheckInterval { get; set; } = 5000;
+    public static int CheckInterval { get; set; } = 10000;
 
     public static void Load()
     {

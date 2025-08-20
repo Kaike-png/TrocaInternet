@@ -115,7 +115,7 @@ public static class Logger
         }
 
         Console.Write("\n   Digite o número do arquivo para visualizar (0 para cancelar): ");
-        string input = Console.ReadLine();
+        string input = Console.ReadLine()!;
 
         if (int.TryParse(input, out int choice) && choice > 0 && choice <= logFiles.Count)
         {

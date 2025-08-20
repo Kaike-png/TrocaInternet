@@ -34,18 +34,31 @@ internal static class Program
     [STAThread]
     static async Task Main(string[] args)
     {
-        // Verifica se é uma chamada de atualização
-        if (args.Length >= 2)
+        // Verifica se o aplicativo foi iniciado após uma atualização
+        string updateFlagFile = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), ".updated");
+        if (File.Exists(updateFlagFile))
         {
-            UpdateManager.PerformUpdate(args[0], args[1]);
-            return;
+            try
+            {
+                File.Delete(updateFlagFile);
+
+                // Mostra uma notificação de que a atualização foi concluída
+                MessageBox.Show(
+                    "O TrocaInternet foi atualizado com sucesso!",
+                    "Atualização Concluída",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Erro ao processar arquivo de atualização: {ex.Message}");
+            }
         }
         // Carrega configurações
         Config.Load();
 
         // Cria uma tarefa agendada para iniciar com o Logon do Usuário 
-        ScheduledTask.CreateScheduledTask();
-
+        ScheduledTask.AddToStartup();
         // Configura o manipulador de eventos do console
         _handler = ConsoleEventCallback;
         SetConsoleCtrlHandler(_handler, true);
@@ -109,8 +122,12 @@ internal static class Program
         };
         monitoringThread.Start();
 
+        // Verifica atualizações ao iniciar
+        UpdateManager.CheckForUpdatesAsync();
+
         // Mantém o ícone na bandeja ativo
         Application.Run();
+              
     }
 
     public static string SafeReadLine()
@@ -160,8 +177,7 @@ internal static class Program
             string option = SafeReadLine();
             if (string.IsNullOrEmpty(option))
             {
-                await Task.Delay(2000);
-                Console.WriteLine("   Pressione qualquer tecla para continuar...");
+                if (IsConsoleVisible()) { Console.WriteLine("   Opção inválida. Tente novamente."); }                
                 break;
             }
             switch (option)
@@ -192,7 +208,7 @@ internal static class Program
                     break;
                 case "9":
                     Console.Write("   Digite o destino (padrão: google.com): ");
-                    string target = Console.ReadLine();
+                    string? target = Console.ReadLine();
                     if (string.IsNullOrWhiteSpace(target)) target = "google.com";
                     await NetworkHelper.PerformTracerouteAsync(target);
                     break;
