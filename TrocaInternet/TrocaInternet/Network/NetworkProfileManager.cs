@@ -97,6 +97,10 @@ public static class NetworkProfileManager
         var profile = Profiles[choice - 1];
         ApplyNetworkSettings(profile);
 
+        // Marca como último usado e salva
+        profile.LastUsed = DateTime.Now;
+        SaveProfiles();
+
         Console.WriteLine($"\n   Perfil '{profile.Name}' aplicado com sucesso!");
         Program.Pause();
     }
@@ -156,6 +160,34 @@ public static class NetworkProfileManager
 
         return dnsServers;
     }
+
+    // Novo: aplica o último perfil usado (ou o mais recente criado se nenhum tiver sido usado)
+    public static void ApplyLastProfile()
+    {
+        if (Profiles == null || Profiles.Count == 0)
+        {
+            Logger.LogInfo("Nenhum perfil disponível para aplicar.");
+            return;
+        }
+
+        // Tenta encontrar pelo LastUsed; caso nenhum tenha, usa o mais recentemente criado
+        NetworkProfile? last = Profiles
+            .Where(p => p.LastUsed != default)
+            .OrderByDescending(p => p.LastUsed)
+            .FirstOrDefault();
+
+        if (last == null)
+        {
+            last = Profiles.OrderByDescending(p => p.CreatedDate).First();
+        }
+
+        ApplyNetworkSettings(last);
+        last.LastUsed = DateTime.Now;
+        SaveProfiles();
+
+        Logger.LogInfo($"Último perfil '{last.Name}' aplicado via menu.");
+    }
+
     public static async Task ManageNetworkProfiles()
     {
         while (true)
@@ -173,10 +205,10 @@ public static class NetworkProfileManager
             switch (option)
             {
                 case "1":
-                    NetworkProfileManager.CreateProfile();
+                    CreateProfile();
                     break;
                 case "2":
-                    NetworkProfileManager.ApplyProfile();
+                    ApplyProfile();
                     break;
                 case "3":
                     NetworkProfile.ListNetworkProfiles();

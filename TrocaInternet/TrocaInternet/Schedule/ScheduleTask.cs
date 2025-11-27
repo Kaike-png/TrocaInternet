@@ -1,14 +1,13 @@
 ﻿
-using Microsoft.Win32;
 using System.Diagnostics;
 
 namespace TrocaInternet.TrocaInternet.Schedule;
 
 public class ScheduledTask
 {
-    public string Name { get; set; }
-    public ISchedule Schedule { get; set; }
-    public Func<Task> Action { get; set; }
+    public string? Name { get; set; }
+    public ISchedule? Schedule { get; set; }
+    public Func<Task>? Action { get; set; }
     public DateTime LastRun { get; set; }
 
     public bool ShouldRun()
@@ -57,7 +56,7 @@ public class ScheduledTask
     {
         string taskName = "TrocaInternet";
         string exePath = Application.ExecutablePath;
-        string workingDir = Path.GetDirectoryName(exePath);
+        string workingDir = Path.GetDirectoryName(exePath)!;
 
         // Caminho do .bat temporário
         string batPath = Path.Combine(workingDir, "StartTrocaInternet.bat");
@@ -77,6 +76,7 @@ public class ScheduledTask
         if (TaskExists(taskName))
         {
             //MessageBox.Show("A tarefa já existe.", "Info");
+            Logger.LogInfo("A tarefa já existe.");
             return;
         }
 
@@ -113,7 +113,7 @@ public class ScheduledTask
             CreateNoWindow = true
         };
 
-        using (Process proc = Process.Start(psi))
+        using (Process proc = Process.Start(psi)!)
         {
             proc.WaitForExit();
             return proc.ExitCode == 0; // 0 = tarefa encontrada, 1 = não encontrada
@@ -132,7 +132,7 @@ public class ScheduledTask
             CreateNoWindow = true
         };
 
-        using (Process proc = Process.Start(psi))
+        using (Process proc = Process.Start(psi)!)
         {
             string output = proc.StandardOutput.ReadToEnd();
             string error = proc.StandardError.ReadToEnd();

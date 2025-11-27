@@ -55,12 +55,12 @@ internal static class NetworkHelper
                     }
                 }
             }
-            return null;
+            return null!;
         }
         catch (Exception ex)
         {
             Logger.LogError($"Erro ao obter o IP atual: {ex.Message}");
-            return null;
+            return null!;
         }
     }
 
@@ -78,12 +78,12 @@ internal static class NetworkHelper
                     }
                 }
             }
-            return null;
+            return null!;
         }
         catch (Exception ex)
         {
             Logger.LogError($"Erro ao obter o gateway atual: {ex.Message}");
-            return null;
+            return null!;
         }
     }
 
@@ -187,12 +187,12 @@ internal static class NetworkHelper
 
             Console.WriteLine($"\n   Gateway atual: {currentGateway}");
             Console.WriteLine($"   Digite o novo octeto do gateway primário atual: {Config.PrimaryGateway}");
-            string newPrimaryOctet = Console.ReadLine();
+            string newPrimaryOctet = Console.ReadLine()!;
             Console.WriteLine($"   Digite o final do gateway secundário atual: {Config.SecondaryGateway}");
-            string newSecondaryOctet = Console.ReadLine();
+            string newSecondaryOctet = Console.ReadLine()!;
             Console.WriteLine($"   O final do gateway primário e secundário serão, respectivamente: {newPrimaryOctet} e {newSecondaryOctet} ");
             Console.Write("   Confirmar alteração dos gateways? (S/N): ");
-            string confirm = Console.ReadLine()?.ToUpper();
+            string confirm = Console.ReadLine()?.ToUpper()!;
 
             if (confirm == "S")
             {
@@ -248,9 +248,10 @@ internal static class NetworkHelper
     }
 
     // Nova funcionalidade: Testar conectividade com hosts específicos
-    public static async Task TestConnectivityAsync(List<string> customHosts = null)
+    public static async Task TestConnectivityAsync(List<string> customHosts = null!)
     {
         var hosts = customHosts ?? Config.PingHosts;
+        Console.Clear();
         Console.WriteLine("\n   Testando conectividade com os hosts:");
 
         foreach (var host in hosts)
@@ -282,6 +283,7 @@ internal static class NetworkHelper
 
             if (Program.IsConsoleVisible())
             {
+                Console.Clear();
                 Console.WriteLine("\n   Configuração de rede restaurada para DHCP");
                 Console.WriteLine("   Pressione qualquer tecla para continuar...");
                 Program.SafeReadLine();
@@ -314,7 +316,7 @@ internal static class NetworkHelper
                 using (var ping = new Ping())
                 {
                     var options = new PingOptions(ttl, true);
-                    var reply = await ping.SendPingAsync(targetAddress, 5000, new byte[32], options);
+                    var reply = await ping.SendPingAsync(targetAddress, 10000, new byte[32], options);
 
                     if (reply.Status == IPStatus.TtlExpired)
                     {
@@ -359,6 +361,7 @@ internal static class NetworkHelper
     {
         try
         {
+            Console.Clear();
             Console.WriteLine("\n   Iniciando teste de velocidade...");
 
             // Lista de servidores de teste com fallback
@@ -370,8 +373,8 @@ internal static class NetworkHelper
             "http://speedtest.wdc01.softlayer.com/downloads/test10.zip"
         };
 
-            byte[] data = null;
-            string usedServer = null;
+            byte[] data = null!;
+            string usedServer = null!;
 
             // Tenta cada servidor até conseguir baixar
             foreach (var server in testServers)
@@ -379,7 +382,7 @@ internal static class NetworkHelper
                 try
                 {
                     Console.WriteLine($"   Tentando servidor: {server}");
-                    using (var client = new WebClient())
+                    using (WebClient client = new())
                     {
                         data = await client.DownloadDataTaskAsync(server);
                         usedServer = server;
@@ -522,14 +525,14 @@ internal static class NetworkHelper
             Console.Clear();
             Console.WriteLine("\n   TESTE DE VELOCIDADE COM SERVIDOR PERSONALIZADO");
             Console.Write("   Digite a URL do arquivo de teste (ou deixe em branco para usar servidores padrão): ");
-            string customUrl = Console.ReadLine();
+            string customUrl = Console.ReadLine()!;
 
             if (!string.IsNullOrWhiteSpace(customUrl))
             {
                 Console.WriteLine("\n   Iniciando teste de velocidade...");
                 Console.WriteLine($"   Servidor: {customUrl}");
 
-                using (var client = new WebClient())
+                using (WebClient client = new())
                 {
                     var stopwatch = Stopwatch.StartNew();
                     byte[] data = await client.DownloadDataTaskAsync(customUrl);

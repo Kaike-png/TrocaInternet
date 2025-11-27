@@ -35,7 +35,7 @@ internal static class Program
     static async Task Main(string[] args)
     {
         // Verifica se o aplicativo foi iniciado após uma atualização
-        string updateFlagFile = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName), ".updated");
+        string updateFlagFile = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule!.FileName)!, ".updated");
         if (File.Exists(updateFlagFile))
         {
             try
@@ -106,6 +106,11 @@ internal static class Program
             ShowConsoleWindow();
             NetworkHelper.RestoreDhcp();
         });
+        contextMenu.Items.Add("Aplicar Último Perfil", null, (s, e) =>
+        {
+            ShowConsoleWindow();
+            NetworkProfileManager.ApplyLastProfile();
+        });
         contextMenu.Items.Add("-");
         contextMenu.Items.Add("Sair", null, (s, e) =>
         {
@@ -138,7 +143,7 @@ internal static class Program
         }
         try
         {
-            return Console.ReadLine();
+            return Console.ReadLine()!;
         }
         catch (IOException)
         {
@@ -151,13 +156,7 @@ internal static class Program
         while (IsConsoleVisible())
         {
             Console.Clear();
-            Console.WriteLine(@"       
-   ████████╗██████╗░░█████╗░░█████╗░░█████╗░  ██╗███╗░░██╗████████╗███████╗██████╗░███╗░░██╗███████╗████████╗
-   ╚══██╔══╝██╔══██╗██╔══██╗██╔══██╗██╔══██╗  ██║████╗░██║╚══██╔══╝██╔════╝██╔══██╗████╗░██║██╔════╝╚══██╔══╝
-   ░░░██║░░░██████╔╝██║░░██║██║░░╚═╝███████║  ██║██╔██╗██║░░░██║░░░█████╗░░██████╔╝██╔██╗██║█████╗░░░░░██║░░░
-   ░░░██║░░░██╔══██╗██║░░██║██║░░██╗██╔══██║  ██║██║╚████║░░░██║░░░██╔══╝░░██╔══██╗██║╚████║██╔══╝░░░░░██║░░░
-   ░░░██║░░░██║░░██║╚█████╔╝╚█████╔╝██║░░██║  ██║██║░╚███║░░░██║░░░███████╗██║░░██║██║░╚███║███████╗░░░██║░░░
-   ░░░╚═╝░░░╚═╝░░╚═╝░╚════╝░░╚════╝░╚═╝░░╚═╝  ╚═╝╚═╝░░╚══╝░░░╚═╝░░░╚══════╝╚═╝░░╚═╝╚═╝░░╚══╝╚══════╝░░░╚═╝░░░");
+            Console.WriteLine(@"       ");
             Console.WriteLine("\n   1. Verificar conexão atual");
             Console.WriteLine("   2. Alterar final do gateway");
             Console.WriteLine("   3. Configurar número da loja");
@@ -233,7 +232,7 @@ internal static class Program
                     break;
             }
         }
-    }       
+    }      
 
     private static void ShowConsoleWindow()
     {
